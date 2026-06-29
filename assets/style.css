@@ -1,0 +1,40 @@
+/* LinuxMonitor Stylesheet — GTK3 */
+
+.monitor-window {
+    background-color: rgba(30, 30, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.skin-horizontal { background: transparent; }
+.skin-horizontal label { padding: 2px 4px; }
+.skin-vertical { background: transparent; }
+.skin-vertical label { padding: 1px 2px; }
+.skin-compact { background: transparent; }
+.skin-compact label { padding: 2px; }
+
+/* Context menu — high contrast dark */
+menu, .menu {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+
+menuitem {
+    color: #e0e0e0;
+    background-color: #2a2a2a;
+    padding: 6px 16px;
+}
+
+menuitem:hover {
+    background-color: #3a6fc5;
+    color: #ffffff;
+}
+
+/* Suggested action button */
+.suggested-action {
+    background-image: none;
+    background-color: #3584e4;
+    color: white;
+    border-radius: 4px;
+}
