@@ -211,7 +211,12 @@ fn build_appearance_page(config: &Rc<RefCell<AppConfig>>, floating: Option<Rc<Fl
     let (opacity_row, opacity_spin) = build_spin_row(L.settings_opacity(), L.settings_opacity_desc(),
         0.3, 1.0, 0.05, config.borrow().appearance.opacity);
     let cfg = config.clone();
-    opacity_spin.connect_value_changed(move |s| { cfg.borrow_mut().appearance.opacity = s.value(); });
+    let fl_op = floating.clone();
+    opacity_spin.connect_value_changed(move |s| {
+        let v = s.value();
+        cfg.borrow_mut().appearance.opacity = v;
+        if let Some(ref f) = fl_op { f.set_opacity(v); }
+    });
     page.add(&opacity_row);
 
     let top_switch = gtk::Switch::new();

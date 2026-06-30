@@ -107,12 +107,6 @@ impl FloatingWindow {
 
         window.show_all();
         window.set_keep_above(config.borrow().appearance.always_on_top);
-        // Set visual for proper transparency (fixes white corners on undecorated windows)
-        if let Some(screen) = gtk::prelude::GtkWindowExt::screen(&window) {
-            if let Some(visual) = screen.rgba_visual() {
-                window.set_visual(Some(&visual));
-            }
-        }
 
         Self { window, content_box, engine, current_skin, config }
     }
@@ -133,6 +127,7 @@ impl FloatingWindow {
     pub fn hide(&self) { self.window.hide(); self.engine.borrow_mut().set_mode(PollMode::Background); }
     pub fn set_skin(&self, skin: Box<dyn Skin>) { *self.current_skin.borrow_mut() = Some(skin); }
     pub fn set_keep_above(&self, ka: bool) { self.window.set_keep_above(ka); }
+    pub fn set_opacity(&self, op: f64) { self.window.set_opacity(op); }
     pub fn get_window(&self) -> &gtk::ApplicationWindow { &self.window }
     pub fn get_content(&self) -> &gtk::Box { &self.content_box }
 }
