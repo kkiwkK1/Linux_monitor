@@ -77,5 +77,12 @@ impl AppController {
             content.show_all();
             self.floating.set_skin(skin);
         }
+        // Resize: compact gets slim height
+        let (w, h) = if skin_name == "compact" {
+            (420, 24)
+        } else {
+            (self.config.borrow().window.width, self.config.borrow().window.height)
+        };
+        self.floating.get_window().resize(w, h);
     }
 }
