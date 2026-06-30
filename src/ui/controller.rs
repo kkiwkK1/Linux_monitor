@@ -5,6 +5,7 @@ use crate::ui::floating_window::FloatingWindow;
 use crate::ui::history_window::HistoryWindow;
 use crate::ui::settings::SettingsWindow;
 use crate::ui::skins;
+use crate::plugin::PluginManager;
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -15,6 +16,7 @@ pub struct AppController {
     config: Rc<RefCell<AppConfig>>,
     app: gtk::Application,
     history_store: Option<Arc<crate::history::store::HistoryStore>>,
+    plugin_manager: Option<Arc<PluginManager>>,
 }
 
 impl AppController {
@@ -22,11 +24,12 @@ impl AppController {
         app: &gtk::Application, floating: &Rc<FloatingWindow>,
         _engine: Rc<RefCell<MonitorEngine>>, config: Rc<RefCell<AppConfig>>,
         history_store: Option<Arc<crate::history::store::HistoryStore>>,
+        plugin_manager: Option<Arc<PluginManager>>,
     ) -> Rc<Self> {
         let ctrl = Rc::new(Self {
             floating: floating.clone(),
             config: config.clone(), app: app.clone(),
-            history_store,
+            history_store, plugin_manager,
         });
 
         let c = ctrl.clone();
@@ -63,7 +66,7 @@ impl AppController {
     pub fn toggle_window(&self) {
         if self.floating.is_visible() { self.floating.hide() } else { self.floating.show() }
     }
-    pub fn show_settings(&self) { let _ = SettingsWindow::new(self.config.clone(), self.floating.get_window(), Some(&self.floating)); }
+    pub fn show_settings(&self) { let _ = SettingsWindow::new(self.config.clone(), self.floating.get_window(), Some(&self.floating), self.plugin_manager.clone()); }
     pub fn show_history(&self) { if let Some(ref s) = self.history_store { let _ = HistoryWindow::new(s.clone(), self.floating.get_window()); } }
 
     pub fn switch_skin(&self, skin_name: &str) {

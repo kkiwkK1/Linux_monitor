@@ -114,7 +114,8 @@ impl TrafficMonitorApp {
             *fr.borrow_mut() = Some(floating_rc.clone());
 
             let history_for_ctrl = history_for_menu.clone();
-            let _controller = AppController::new(app, &floating_rc, engine, cfg.clone(), history_for_ctrl);
+            let pm_for_ctrl = plugin_for_menu.clone();
+            let _controller = AppController::new(app, &floating_rc, engine, cfg.clone(), history_for_ctrl, pm_for_ctrl);
 
             let app_quit = app.clone();
             let quit_action = gtk::gio::SimpleAction::new("quit", None);

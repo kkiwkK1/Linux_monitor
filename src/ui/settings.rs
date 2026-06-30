@@ -1,10 +1,12 @@
 use crate::config::AppConfig;
 use crate::locale::L;
+use crate::plugin::PluginManager;
 use crate::ui::floating_window::FloatingWindow;
 use crate::ui::skins;
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 
 /// Settings/preferences window
 pub struct SettingsWindow {
@@ -16,6 +18,7 @@ impl SettingsWindow {
         config: Rc<RefCell<AppConfig>>,
         parent: &gtk::ApplicationWindow,
         floating: Option<&Rc<FloatingWindow>>,
+        plugin_manager: Option<Arc<PluginManager>>,
     ) -> Self {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
         window.set_title(L.settings_title());
@@ -47,6 +50,13 @@ impl SettingsWindow {
         let appearance_page = build_appearance_page(&config, floating.cloned());
         let appearance_label = gtk::Label::new(Some(L.settings_tab_appearance()));
         notebook.append_page(&appearance_page, Some(&appearance_label));
+
+        // Tab 4: Plugins
+        if let Some(ref pm) = plugin_manager {
+            let plugins_page = build_plugins_page(pm);
+            let plugins_label = gtk::Label::new(Some(L.plugins_tab()));
+            notebook.append_page(&plugins_page, Some(&plugins_label));
+        }
 
         main_box.add(&notebook);
 
@@ -262,4 +272,63 @@ fn build_spin_row(title: &str, subtitle: &str, min: f64, max: f64, step: f64, va
     row.set_hexpand(true);
     row.add(&spin);
     (row.upcast::<gtk::Widget>(), spin)
+}
+
+fn build_plugins_page(pm: &Arc<PluginManager>) -> gtk::Widget {
+    let page = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    page.set_margin_start(24); page.set_margin_end(24); page.set_margin_top(24);
+
+    // Directory hint
+    let dir_label = gtk::Label::new(Some(L.plugins_dir()));
+    dir_label.set_halign(gtk::Align::Start);
+    dir_label.style_context().add_class("dim-label");
+    dir_label.set_line_wrap(true);
+    page.add(&dir_label);
+
+    // Scan button
+    let scan_btn = gtk::Button::with_label(L.plugins_scan());
+    let pm_scan = pm.clone();
+    scan_btn.connect_clicked(move |_| { pm_scan.scan(); });
+    page.add(&scan_btn);
+
+    // Plugin list
+    let list = pm.list();
+    if list.is_empty() {
+        let empty = gtk::Label::new(Some(L.plugins_none()));
+        empty.set_margin_top(20);
+        page.add(&empty);
+    } else {
+        let count = gtk::Label::new(None);
+        count.set_markup(&format!("<b>{}</b>", L.plugins_count().replace("{}", &list.len().to_string())));
+        count.set_halign(gtk::Align::Start);
+        page.add(&count);
+
+        let scroll = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+        scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+        let list_box = gtk::Box::new(gtk::Orientation::Vertical, 6);
+
+        for info in &list {
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            let name = gtk::Label::new(Some(&info.name));
+            name.set_halign(gtk::Align::Start);
+            row.add(&name);
+            row.set_hexpand(true);
+
+            let sw = gtk::Switch::new();
+            sw.set_active(info.enabled);
+            sw.set_valign(gtk::Align::Center);
+            let pm_toggle = pm.clone();
+            let name_toggle = info.name.clone();
+            sw.connect_state_set(move |_, active| {
+                // Toggle is handled by PluginManager::toggle
+                gtk::glib::Propagation::Proceed
+            });
+            row.add(&sw);
+            list_box.add(&row);
+        }
+        scroll.add(&list_box);
+        page.add(&scroll);
+    }
+
+    page.upcast::<gtk::Widget>()
 }

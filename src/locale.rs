@@ -80,6 +80,13 @@ pub trait Locale: Send + Sync {
     fn label_temp(&self) -> &str;
     fn label_net_rx(&self) -> &str;
     fn label_net_tx(&self) -> &str;
+
+    // Plugins / 插件
+    fn plugins_tab(&self) -> &str;
+    fn plugins_dir(&self) -> &str;
+    fn plugins_scan(&self) -> &str;
+    fn plugins_none(&self) -> &str;
+    fn plugins_count(&self) -> &str;
 }
 
 // ============================================================
@@ -159,6 +166,12 @@ impl Locale for ChineseLocale {
     fn label_temp(&self) -> &str { "🌡" }
     fn label_net_rx(&self) -> &str { "↓" }
     fn label_net_tx(&self) -> &str { "↑" }
+
+    fn plugins_tab(&self) -> &str { "  插件  " }
+    fn plugins_dir(&self) -> &str { "插件目录: ~/.config/linux-monitor/plugins/" }
+    fn plugins_scan(&self) -> &str { "重新扫描" }
+    fn plugins_none(&self) -> &str { "暂无插件" }
+    fn plugins_count(&self) -> &str { "已加载 {} 个插件" }
 }
 
 // ============================================================
@@ -238,6 +251,12 @@ impl Locale for EnglishLocale {
     fn label_temp(&self) -> &str { "🌡" }
     fn label_net_rx(&self) -> &str { "↓" }
     fn label_net_tx(&self) -> &str { "↑" }
+
+    fn plugins_tab(&self) -> &str { " Plugins " }
+    fn plugins_dir(&self) -> &str { "Plugin dir: ~/.config/linux-monitor/plugins/" }
+    fn plugins_scan(&self) -> &str { "Rescan" }
+    fn plugins_none(&self) -> &str { "No plugins found" }
+    fn plugins_count(&self) -> &str { "Loaded {} plugins" }
 }
 
 /// Global locale instance
