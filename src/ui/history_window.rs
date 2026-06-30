@@ -2,6 +2,8 @@ use crate::history::store::HistoryStore;
 use crate::history::TimeRange;
 use crate::locale::L;
 use gtk::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub struct HistoryWindow {
@@ -19,14 +21,11 @@ impl HistoryWindow {
 
         let main_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
 
-        // Header
         let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         header.set_margin_start(12); header.set_margin_end(12); header.set_margin_top(8);
-
         let title = gtk::Label::new(None);
         title.set_markup(&format!("<b>{}</b>", L.history_title()));
-        header.add(&title);
-        header.set_hexpand(true);
+        header.add(&title); header.set_hexpand(true);
 
         let ranges = [L.range_5min(), L.range_30min(), L.range_1hour(),
                        L.range_6hours(), L.range_24hours(), L.range_all()];
@@ -39,24 +38,40 @@ impl HistoryWindow {
         header.add(&export_btn);
         main_box.add(&header);
 
-        // Stats bar
         let stats_label = gtk::Label::new(Some(&format!("{}: ... | {}: ... | {}",
             L.history_records(), L.history_db_size(), L.history_retention())));
         stats_label.set_margin_start(12); stats_label.set_margin_end(12); stats_label.set_margin_top(4);
         main_box.add(&stats_label);
 
-        // Drawing area
         let drawing_area = gtk::DrawingArea::new();
-        drawing_area.set_hexpand(true);
-        drawing_area.set_vexpand(true);
+        drawing_area.set_hexpand(true); drawing_area.set_vexpand(true);
         drawing_area.set_margin_start(12); drawing_area.set_margin_end(12); drawing_area.set_margin_bottom(12);
         drawing_area.set_size_request(-1, 280);
         main_box.add(&drawing_area);
 
-        let store_for_draw = store.clone();
+        // Shared time range
+        let current_range = Rc::new(RefCell::new(TimeRange::Last1Hour));
+
+        let store_draw = store.clone();
+        let range_draw = current_range.clone();
         drawing_area.connect_draw(move |area, cr| {
-            draw_charts(area, cr, &store_for_draw, &TimeRange::Last1Hour);
+            draw_charts(area, cr, &store_draw, &range_draw.borrow());
             gtk::glib::Propagation::Proceed
+        });
+
+        // Combo change → update range + redraw
+        let da = drawing_area.clone();
+        let range_cb = current_range.clone();
+        range_combo.connect_changed(move |combo| {
+            *range_cb.borrow_mut() = match combo.active() {
+                Some(0) => TimeRange::Last5Min,
+                Some(1) => TimeRange::Last30Min,
+                Some(2) => TimeRange::Last1Hour,
+                Some(3) => TimeRange::Last6Hours,
+                Some(4) => TimeRange::Last24Hours,
+                _ => TimeRange::All,
+            };
+            da.queue_draw();
         });
 
         // Stats
@@ -64,13 +79,6 @@ impl HistoryWindow {
             stats_label.set_text(&format!("{}: {} | {}: {} | {}",
                 L.history_records(), count, L.history_db_size(), format_bytes(size), L.history_retention()));
         }
-
-        // Range change → redraw
-        let da = drawing_area.clone();
-        range_combo.connect_changed(move |combo| {
-            da.queue_draw();
-            let _ = combo.active();
-        });
 
         // Export
         let store_export = store.clone();
@@ -83,7 +91,7 @@ impl HistoryWindow {
     }
 }
 
-fn draw_charts(area: &gtk::DrawingArea, cr: &cairo::Context,
+fn draw_charts(area: &gtk::DrawingArea, cr: &gtk::cairo::Context,
                store: &Arc<HistoryStore>, range: &TimeRange)
 {
     let records = match store.query(range.clone()) {
