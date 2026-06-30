@@ -50,6 +50,12 @@ pub trait Locale: Send + Sync {
     fn settings_opacity(&self) -> &str;
     fn settings_opacity_desc(&self) -> &str;
     fn settings_always_on_top(&self) -> &str;
+    fn settings_bg_type(&self) -> &str;
+    fn settings_bg_none(&self) -> &str;
+    fn settings_bg_color(&self) -> &str;
+    fn settings_bg_image(&self) -> &str;
+    fn settings_pick_color(&self) -> &str;
+    fn settings_pick_image(&self) -> &str;
     fn settings_apply(&self) -> &str;
     fn settings_cancel(&self) -> &str;
 
@@ -139,6 +145,12 @@ impl Locale for ChineseLocale {
     fn settings_opacity(&self) -> &str { "透明度" }
     fn settings_opacity_desc(&self) -> &str { "窗口透明度 (0.3–1.0)" }
     fn settings_always_on_top(&self) -> &str { "窗口置顶" }
+    fn settings_bg_type(&self) -> &str { "背景类型:" }
+    fn settings_bg_none(&self) -> &str { "默认" }
+    fn settings_bg_color(&self) -> &str { "纯色" }
+    fn settings_bg_image(&self) -> &str { "图片" }
+    fn settings_pick_color(&self) -> &str { "选择颜色" }
+    fn settings_pick_image(&self) -> &str { "选择图片" }
     fn settings_apply(&self) -> &str { "应用" }
     fn settings_cancel(&self) -> &str { "取消" }
 
@@ -224,6 +236,12 @@ impl Locale for EnglishLocale {
     fn settings_opacity(&self) -> &str { "Opacity" }
     fn settings_opacity_desc(&self) -> &str { "Window transparency (0.3–1.0)" }
     fn settings_always_on_top(&self) -> &str { "Always on top" }
+    fn settings_bg_type(&self) -> &str { "Background:" }
+    fn settings_bg_none(&self) -> &str { "Default" }
+    fn settings_bg_color(&self) -> &str { "Solid Color" }
+    fn settings_bg_image(&self) -> &str { "Image" }
+    fn settings_pick_color(&self) -> &str { "Pick Color" }
+    fn settings_pick_image(&self) -> &str { "Pick Image" }
     fn settings_apply(&self) -> &str { "Apply" }
     fn settings_cancel(&self) -> &str { "Cancel" }
 

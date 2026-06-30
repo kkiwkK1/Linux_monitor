@@ -128,6 +128,23 @@ impl FloatingWindow {
     pub fn set_skin(&self, skin: Box<dyn Skin>) { *self.current_skin.borrow_mut() = Some(skin); }
     pub fn set_keep_above(&self, ka: bool) { self.window.set_keep_above(ka); }
     pub fn set_opacity(&self, op: f64) { self.window.set_opacity(op); }
+    pub fn set_background(&self, appearance: &crate::config::AppearanceConfig) {
+        let css = CssProvider::new();
+        let bg_css = match appearance.background_type {
+            crate::config::BackgroundType::None =>
+                "background-color: rgba(30, 30, 30, 0.92);".to_string(),
+            crate::config::BackgroundType::Color =>
+                format!("background-color: {};", appearance.background_color),
+            crate::config::BackgroundType::Image =>
+                format!("background-image: url('{}'); background-size: cover;", appearance.background_image),
+        };
+        let data = format!(".monitor-window {{ {} }}", bg_css);
+        if css.load_from_data(data.as_bytes()).is_ok() {
+            gtk::StyleContext::add_provider_for_screen(
+                &gtk::prelude::GtkWindowExt::screen(&self.window).unwrap(), &css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+        }
+    }
     pub fn get_window(&self) -> &gtk::ApplicationWindow { &self.window }
     pub fn get_content(&self) -> &gtk::Box { &self.content_box }
 }

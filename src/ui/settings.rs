@@ -249,8 +249,108 @@ fn build_appearance_page(config: &Rc<RefCell<AppConfig>>, floating: Option<Rc<Fl
     });
     page.add(&top_row);
 
+    // ── Background ──
+    let bg_label = gtk::Label::new(Some(L.settings_bg_type()));
+    bg_label.set_halign(gtk::Align::Start);
+    bg_label.set_margin_top(8);
+    page.add(&bg_label);
+
+    let bg_combo = gtk::ComboBoxText::new();
+    bg_combo.append_text(L.settings_bg_none());
+    bg_combo.append_text(L.settings_bg_color());
+    bg_combo.append_text(L.settings_bg_image());
+    bg_combo.set_active(match config.borrow().appearance.background_type {
+        crate::config::BackgroundType::None => Some(0),
+        crate::config::BackgroundType::Color => Some(1),
+        crate::config::BackgroundType::Image => Some(2),
+    });
+    page.add(&bg_combo);
+
+    // Color picker
+    let color_btn = gtk::ColorButton::new();
+    color_btn.set_title(L.settings_pick_color());
+    page.add(&color_btn);
+
+    // Image picker
+    let img_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let img_label = gtk::Label::new(None);
+    if !config.borrow().appearance.background_image.is_empty() {
+        img_label.set_text(&config.borrow().appearance.background_image);
+    } else {
+        img_label.set_text(L.settings_pick_image());
+    }
+    img_label.set_halign(gtk::Align::Start);
+    img_label.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+    img_row.add(&img_label);
+    let img_btn = gtk::Button::with_label("...");
+    img_row.add(&img_btn);
+    page.add(&img_row);
+
+    // Connect background changes
+    let cfg_bg = config.clone();
+    let fl_bg = floating.clone();
+    let color_btn2 = color_btn.clone();
+    let img_label2 = img_label.clone();
+    bg_combo.connect_changed(move |combo| {
+        let bg_type = match combo.active() {
+            Some(0) => crate::config::BackgroundType::None,
+            Some(1) => crate::config::BackgroundType::Color,
+            _ => crate::config::BackgroundType::Image,
+        };
+        cfg_bg.borrow_mut().appearance.background_type = bg_type.clone();
+        if let Some(ref f) = fl_bg { f.set_background(&cfg_bg.borrow().appearance); }
+    });
+
+    let cfg_color = config.clone();
+    let fl_color = floating.clone();
+    let bg_combo_cc = bg_combo.clone(); color_btn.connect_color_set(move |btn| {
+        let rgba = btn.rgba();
+        let hex = format!("#{:02x}{:02x}{:02x}", (rgba.red()*255.0) as u8, (rgba.green()*255.0) as u8, (rgba.blue()*255.0) as u8);
+        cfg_color.borrow_mut().appearance.background_color = hex;
+        cfg_color.borrow_mut().appearance.background_type = crate::config::BackgroundType::Color;
+        bg_combo_cc.set_active(Some(1));
+        if let Some(ref f) = fl_color { f.set_background(&cfg_color.borrow().appearance); }
+    });
+
+    let cfg_img = config.clone();
+    let fl_img = floating.clone();
+    let img_lbl = img_label2.clone();
+    img_btn.connect_clicked(move |_| {
+        let dialog = gtk::FileChooserDialog::new(
+            Some(L.settings_pick_image()), None::<&gtk::Window>,
+            gtk::FileChooserAction::Open,
+        );
+        dialog.add_button(L.settings_cancel(), gtk::ResponseType::Cancel);
+        dialog.add_button("Open", gtk::ResponseType::Accept);
+        let filter = gtk::FileFilter::new();
+        filter.add_pixbuf_formats();
+        dialog.set_filter(&filter);
+        let cfg = cfg_img.clone();
+        let fl = fl_img.clone();
+        let lbl = img_lbl.clone();
+        let combo = bg_combo.clone();
+        dialog.connect_response(move |dlg, resp| {
+            if resp == gtk::ResponseType::Accept {
+                if let Some(file) = dlg.file() {
+                    if let Some(path) = file.path() {
+                        if let Some(p) = path.to_str() {
+                            lbl.set_text(p);
+                            cfg.borrow_mut().appearance.background_image = p.to_string();
+                            cfg.borrow_mut().appearance.background_type = crate::config::BackgroundType::Image;
+                            combo.set_active(Some(2));
+                            if let Some(ref f) = fl { f.set_background(&cfg.borrow().appearance); }
+                        }
+                    }
+                }
+            }
+            dlg.close();
+        });
+        dialog.show_all();
+    });
+
     page.upcast::<gtk::Widget>()
 }
+
 
 fn build_spin_row(title: &str, subtitle: &str, min: f64, max: f64, step: f64, value: f64)
     -> (gtk::Widget, gtk::SpinButton)

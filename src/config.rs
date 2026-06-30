@@ -55,6 +55,27 @@ pub struct AppearanceConfig {
     /// Always on top
     #[serde(default = "default_true")]
     pub always_on_top: bool,
+    /// Custom background
+    #[serde(default)]
+    pub background_type: BackgroundType,
+    #[serde(default)]
+    pub background_color: String,
+    #[serde(default)]
+    pub background_image: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum BackgroundType {
+    #[serde(rename = "none")]
+    None,
+    #[serde(rename = "color")]
+    Color,
+    #[serde(rename = "image")]
+    Image,
+}
+
+impl Default for BackgroundType {
+    fn default() -> Self { BackgroundType::None }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,6 +144,9 @@ impl Default for AppearanceConfig {
             font_size: default_font_size(),
             opacity: 0.92,
             always_on_top: true,
+            background_type: BackgroundType::None,
+            background_color: String::new(),
+            background_image: String::new(),
         }
     }
 }
