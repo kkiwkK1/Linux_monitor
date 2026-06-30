@@ -50,14 +50,45 @@ impl FloatingWindow {
         );
         window.add(&event_box);
 
-        // ── Drag ──
-        let wd = window.clone();
-        event_box.connect_button_press_event(move |_, ev| {
-            if ev.button() == 1 {
-                wd.begin_move_drag(1, ev.root().0 as i32, ev.root().1 as i32, ev.time());
-            }
-            gtk::glib::Propagation::Proceed
-        });
+        // ── Manual drag with edge snapping ──
+        let drag_state: Rc<RefCell<Option<(f64, f64, i32, i32)>>> = Rc::new(RefCell::new(None));
+        {
+            let wd = window.clone();
+            let ds = drag_state.clone();
+            event_box.connect_button_press_event(move |_, ev| {
+                if ev.button() == 1 {
+                    let (rx, ry) = ev.root();
+                    let (wx, wy) = wd.position();
+                    *ds.borrow_mut() = Some((rx, ry, wx, wy));
+                }
+                gtk::glib::Propagation::Proceed
+            });
+        }
+        {
+            let wd = window.clone();
+            let ds = drag_state.clone();
+            event_box.connect_motion_notify_event(move |_, ev| {
+                if let Some((sx, sy, wx, wy)) = *ds.borrow() {
+                    let (rx, ry) = ev.root();
+                    let dx = rx as i32 - sx as i32;
+                    let dy = ry as i32 - sy as i32;
+                    wd.move_(wx + dx, wy + dy);
+                }
+                gtk::glib::Propagation::Proceed
+            });
+        }
+        {
+            let wd = window.clone();
+            let ds = drag_state.clone();
+            event_box.connect_button_release_event(move |_, ev| {
+                if let Some((_, _, _, _)) = *ds.borrow() {
+                    *ds.borrow_mut() = None;
+                    // Snap to nearest edge
+                    snap_to_edge(&wd);
+                }
+                gtk::glib::Propagation::Proceed
+            });
+        }
 
         // ── Right-click ──
         let erc = engine.clone(); let crc = config.clone(); let src = current_skin.clone();
@@ -132,5 +163,40 @@ fn mi(app: &gtk::Application, label: &str, action: &str) -> gtk::MenuItem {
     let app = app.clone();
     item.connect_activate(move |_| { app.activate_action(&a, None); });
     item
+}
+
+const SNAP_THRESHOLD: i32 = 20;
+
+fn snap_to_edge(window: &gtk::ApplicationWindow) {
+    if let Some(screen) = gtk::prelude::GtkWindowExt::screen(window) {
+        let (wx, wy) = window.position();
+        let (ww, wh) = window.size();
+        // Use display's primary monitor geometry
+        let display = screen.display();
+        let monitor = display.primary_monitor().unwrap();
+        let geom = monitor.geometry();
+        let mx = geom.x(); let my = geom.y();
+        let mw = geom.width(); let mh = geom.height();
+
+        let mut nx = wx;
+        let mut ny = wy;
+
+        // Snap to left/right edges
+        if (wx - mx).abs() < SNAP_THRESHOLD {
+            nx = mx;
+        } else if (wx + ww - mx - mw).abs() < SNAP_THRESHOLD {
+            nx = mx + mw - ww;
+        }
+        // Snap to top/bottom edges
+        if (wy - my).abs() < SNAP_THRESHOLD {
+            ny = my;
+        } else if (wy + wh - my - mh).abs() < SNAP_THRESHOLD {
+            ny = my + mh - wh;
+        }
+
+        if nx != wx || ny != wy {
+            window.move_(nx, ny);
+        }
+    }
 }
 
