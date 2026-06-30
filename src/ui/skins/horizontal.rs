@@ -45,31 +45,36 @@ impl Skin for HorizontalSkin {
     fn display_name(&self) -> &str { L.skin_horizontal() }
 
     fn create_widget(&self, config: &AppearanceConfig) -> gtk::Widget {
-        let outer = GtkBox::new(Orientation::Vertical, 2);
+        let outer = GtkBox::new(Orientation::Vertical, 0);
         outer.style_context().add_class("skin-horizontal");
 
-        let top = GtkBox::new(Orientation::Horizontal, 10);
-        top.set_margin_start(10); top.set_margin_end(10);
-        top.set_margin_top(4); top.set_margin_bottom(2);
+        // Top row: centered labels with fixed-width gaps
+        let top = GtkBox::new(Orientation::Horizontal, 0);
+        top.set_halign(gtk::Align::Center);
+        top.set_margin_start(14); top.set_margin_end(14);
+        top.set_margin_top(6); top.set_margin_bottom(4);
         let fs = config.font_size.max(8);
 
         macro_rules! mk_label {
-            ($field:ident, $color:expr, $text:expr) => {{
+            ($field:ident, $color:expr, $text:expr, $pad:expr) => {{
                 let l = Label::new(None);
                 l.set_markup(&format!("<span font_desc='{}' foreground='{}'>{}</span>", fs, $color, $text));
+                l.set_width_chars($pad);
+                l.set_xalign(0.5);
                 *self.$field.borrow_mut() = Some(l.clone());
-                top.add(&l);
+                top.pack_start(&l, false, false, 2);
             }};
         }
-        mk_label!(cpu_label, "#66ccff", "CPU --%");
-        mk_label!(mem_label, "#99ee99", "MEM --%");
-        mk_label!(net_label, "#ffcc66", "↓--K ↑--K");
-        mk_label!(temp_label, "#ff9966", "🌡 --°C");
+        // Fixed-width labels: CPU(6ch) spacer MEM(7ch) spacer NET(15ch) spacer GPU(9ch)
+        mk_label!(cpu_label, "#66ccff", "  CPU\n  --%", 6);
+        mk_label!(mem_label, "#99ee99", "  MEM\n  --%", 7);
+        mk_label!(net_label, "#ffcc66", "  ↓-------\n  ↑-------", 15);
+        mk_label!(temp_label, "#ff9966", " 🌡 --°C", 9);
         outer.add(&top);
 
-        // Chart
+        // Chart — taller, two sections
         let chart = DrawingArea::new();
-        chart.set_size_request(-1, 56);
+        chart.set_size_request(-1, 72);
         chart.set_margin_start(6); chart.set_margin_end(6); chart.set_margin_bottom(4);
         *self.chart.borrow_mut() = Some(chart.clone());
         outer.add(&chart);
@@ -81,26 +86,47 @@ impl Skin for HorizontalSkin {
             let h = area.allocation().height() as f64;
             if w < 10.0 || h < 10.0 { return gtk::glib::Propagation::Proceed; }
 
-            // Subtle grid
-            cr.set_source_rgba(1.0, 1.0, 1.0, 0.05);
+            // Subtle center line
+            cr.set_source_rgba(1.0, 1.0, 1.0, 0.04);
             cr.set_line_width(0.5);
-            for i in 1..4 { let y = h * i as f64 / 4.0; cr.move_to(0.0, y); cr.line_to(w, y); }
+            let mid = h / 2.0;
+            cr.move_to(0.0, mid); cr.line_to(w, mid);
+            cr.move_to(0.0, h * 0.25); cr.line_to(w, h * 0.25);
+            cr.move_to(0.0, h * 0.75); cr.line_to(w, h * 0.75);
             let _ = cr.stroke();
 
             let cpu = hc.borrow(); let mem = hm.borrow();
             let rx = hr.borrow(); let tx = ht.borrow(); let gpu = hg.borrow();
             if cpu.len() < 2 { return gtk::glib::Propagation::Proceed; }
 
-            // Draw from right — new data always appears on the right side
             let slots = CHART_POINTS as f64;
-            let x0 = w * (1.0 - cpu.len() as f64 / slots); // left offset
             let sw = w / slots;
+            let x0 = w * (1.0 - cpu.len() as f64 / slots);
+            let top_h = mid; // upper half: CPU + MEM (0-100%)
+            let bot_h = h - mid; // lower half: Network + GPU
 
-            draw_line(cr, &cpu, 100.0, 0.2, 0.8, 1.0, x0, sw, h, 1.5);
-            draw_line(cr, &mem, 100.0, 0.3, 0.9, 0.4, x0, sw, h, 1.5);
-            draw_line(cr, &rx,  100.0, 1.0, 0.8, 0.2, x0, sw, h, 1.2);
-            draw_line(cr, &tx,  100.0, 1.0, 0.5, 0.3, x0, sw, h, 1.2);
-            draw_line(cr, &gpu, 100.0, 1.0, 0.3, 0.3, x0, sw, h, 1.2);
+            // Upper: CPU (blue), MEM (green) — 0-100%
+            draw_line(cr, &cpu, 100.0, 0.3, 0.8, 1.0, x0, sw, 0.0, top_h, 1.8);
+            draw_line(cr, &mem, 100.0, 0.3, 0.95, 0.5, x0, sw, 0.0, top_h, 1.8);
+
+            // Lower left: Net RX (yellow), Net TX (orange) — 0-10MB/s = 100%
+            draw_line(cr, &rx,  100.0, 0.95, 0.75, 0.2, x0, sw, mid, bot_h, 1.3);
+            draw_line(cr, &tx,  100.0, 1.0,  0.5,  0.25, x0, sw, mid, bot_h, 1.3);
+            // Lower right: GPU temp (red, dashed-ish, mapped 0-100°C)
+            draw_line(cr, &gpu, 100.0, 1.0,  0.35, 0.35, x0, sw, mid, bot_h, 1.0);
+
+            // Labels
+            cr.set_font_size(7.0);
+            cr.set_source_rgba(0.3,0.8,1.0,0.6);
+            cr.move_to(2.0, 9.0); let _ = cr.show_text("CPU");
+            cr.set_source_rgba(0.3,0.95,0.5,0.6);
+            cr.move_to(30.0, 9.0); let _ = cr.show_text("MEM");
+            cr.set_source_rgba(0.95,0.75,0.2,0.5);
+            cr.move_to(2.0, mid + 9.0); let _ = cr.show_text("▼RX");
+            cr.set_source_rgba(1.0,0.5,0.25,0.5);
+            cr.move_to(35.0, mid + 9.0); let _ = cr.show_text("▲TX");
+            cr.set_source_rgba(1.0,0.35,0.35,0.5);
+            cr.move_to(68.0, mid + 9.0); let _ = cr.show_text("GPU°C");
 
             gtk::glib::Propagation::Proceed
         });
@@ -122,25 +148,24 @@ impl Skin for HorizontalSkin {
             .or_else(|| snapshot.gpu.first().map(|g| g.temperature_c as f64))
             .unwrap_or(0.0);
 
+        // Fixed-width values — two-line layout
         if let Some(ref l) = *self.cpu_label.borrow() {
-            l.set_markup(&format!("<span font_desc='{}' foreground='#66ccff'>CPU {:3.0}%</span>", fs, cpu_v));
+            l.set_markup(&format!("<span font_desc='{}' foreground='#66ccff'>  CPU\n {:>4.0}%</span>", fs, cpu_v));
         }
         if let Some(ref l) = *self.mem_label.borrow() {
-            l.set_markup(&format!("<span font_desc='{}' foreground='#99ee99'>MEM {:3.0}%</span>", fs, mem_v));
+            l.set_markup(&format!("<span font_desc='{}' foreground='#99ee99'>  MEM\n {:>4.0}%</span>", fs, mem_v));
         }
         if let Some(ref l) = *self.net_label.borrow() {
-            if let Some(n) = net {
-                l.set_markup(&format!("<span font_desc='{}' foreground='#ffcc66'>↓{} ↑{}</span>",
-                    fs, fmt_speed(n.rx_speed_bytes), fmt_speed(n.tx_speed_bytes)));
-            }
+            let rx_s = fmt_speed(rx_v as u64);
+            let tx_s = fmt_speed(tx_v as u64);
+            l.set_markup(&format!("<span font_desc='{}' foreground='#ffcc66'>  ↓{:>7}\n  ↑{:>7}</span>", fs, rx_s, tx_s));
         }
         if let Some(ref l) = *self.temp_label.borrow() {
             let gpu_t = snapshot.gpu.first().map(|g| g.temperature_c).unwrap_or(gpu_v as f32) as f64;
             let c = if gpu_t > 80.0 { "#ff4444" } else if gpu_t > 60.0 { "#ffaa44" } else { "#ff9966" };
-            l.set_markup(&format!("<span font_desc='{}' foreground='{}'>GPU {:3.0}°C</span>", fs, c, gpu_t));
+            l.set_markup(&format!("<span font_desc='{}' foreground='{}'> 🌡 {:>3.0}°C</span>", fs, c, gpu_t));
         }
 
-        // Push to shared buffers
         push(&self.h_cpu, cpu_v); push(&self.h_mem, mem_v);
         push(&self.h_rx,  (rx_v / 10_485_760.0 * 100.0).min(100.0));
         push(&self.h_tx,  (tx_v / 10_485_760.0 * 100.0).min(100.0));
@@ -153,12 +178,11 @@ impl Skin for HorizontalSkin {
 
 fn push(buf: &Rc<RefCell<Vec<f64>>>, val: f64) {
     let mut b = buf.borrow_mut();
-    b.push(val);
-    if b.len() > CHART_POINTS { b.remove(0); }
+    b.push(val); if b.len() > CHART_POINTS { b.remove(0); }
 }
 
 fn draw_line(cr: &gtk::cairo::Context, data: &[f64], max: f64,
-             r: f64, g: f64, b: f64, x0: f64, sw: f64, h: f64, lw: f64) {
+             r: f64, g: f64, b: f64, x0: f64, sw: f64, y0: f64, yh: f64, lw: f64) {
     if max <= 0.0 || data.len() < 2 { return; }
     cr.set_source_rgba(r, g, b, 0.85);
     cr.set_line_width(lw);
@@ -166,17 +190,17 @@ fn draw_line(cr: &gtk::cairo::Context, data: &[f64], max: f64,
     let mut first = true;
     for (i, v) in data.iter().enumerate() {
         let x = x0 + i as f64 * sw;
-        let y = h - (v / max * h).clamp(0.0, h);
+        let y = y0 + yh - (v / max * yh).clamp(0.0, yh);
         if first { cr.move_to(x, y); first = false; } else { cr.line_to(x, y); }
     }
     let _ = cr.stroke();
 }
 
 pub fn fmt_speed(bps: u64) -> String {
-    if bps >= 1_000_000_000 { format!("{:4.1}GB/s", bps as f64 / 1_000_000_000.0) }
-    else if bps >= 1_000_000 { format!("{:4.1}MB/s", bps as f64 / 1_000_000.0) }
-    else if bps >= 1_000 { format!("{:4.1}KB/s", bps as f64 / 1_000.0) }
-    else { format!("{:4}B/s", bps) }
+    if bps >= 1_000_000_000 { format!("{:5.1}GB/s", bps as f64 / 1_000_000_000.0) }
+    else if bps >= 1_000_000 { format!("{:5.1}MB/s", bps as f64 / 1_000_000.0) }
+    else if bps >= 1_000 { format!("{:5.1}KB/s", bps as f64 / 1_000.0) }
+    else { format!("{:5}B/s", bps) }
 }
 
 pub fn fmt_bytes(bytes: u64) -> String {
