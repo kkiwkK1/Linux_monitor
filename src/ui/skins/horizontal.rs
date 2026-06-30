@@ -109,24 +109,11 @@ impl Skin for HorizontalSkin {
             draw_line(cr, &cpu, 100.0, 0.3, 0.8, 1.0, x0, sw, 0.0, top_h, 1.8);
             draw_line(cr, &mem, 100.0, 0.3, 0.95, 0.5, x0, sw, 0.0, top_h, 1.8);
 
-            // Lower left: Net RX (yellow), Net TX (orange) — 0-10MB/s = 100%
-            draw_line(cr, &rx,  100.0, 0.95, 0.75, 0.2, x0, sw, mid, bot_h, 1.3);
-            draw_line(cr, &tx,  100.0, 1.0,  0.5,  0.25, x0, sw, mid, bot_h, 1.3);
-            // Lower right: GPU temp (red, dashed-ish, mapped 0-100°C)
-            draw_line(cr, &gpu, 100.0, 1.0,  0.35, 0.35, x0, sw, mid, bot_h, 1.0);
-
-            // Labels
-            cr.set_font_size(7.0);
-            cr.set_source_rgba(0.3,0.8,1.0,0.6);
-            cr.move_to(2.0, 9.0); let _ = cr.show_text("CPU");
-            cr.set_source_rgba(0.3,0.95,0.5,0.6);
-            cr.move_to(30.0, 9.0); let _ = cr.show_text("MEM");
-            cr.set_source_rgba(0.95,0.75,0.2,0.5);
-            cr.move_to(2.0, mid + 9.0); let _ = cr.show_text("▼RX");
-            cr.set_source_rgba(1.0,0.5,0.25,0.5);
-            cr.move_to(35.0, mid + 9.0); let _ = cr.show_text("▲TX");
-            cr.set_source_rgba(1.0,0.35,0.35,0.5);
-            cr.move_to(68.0, mid + 9.0); let _ = cr.show_text("GPU°C");
+            // Lower: Net RX (yellow), Net TX (orange) — 0-10MB/s = 100%
+            draw_line(cr, &rx,  100.0, 0.95, 0.75, 0.15, x0, sw, mid, bot_h, 1.5);
+            draw_line(cr, &tx,  100.0, 1.0,  0.4,  0.2, x0, sw, mid + 4.0, bot_h - 4.0, 1.2);
+            // GPU temp (red, offset slightly)
+            draw_line(cr, &gpu, 100.0, 1.0,  0.3,  0.3, x0, sw, mid, bot_h, 0.8);
 
             gtk::glib::Propagation::Proceed
         });
