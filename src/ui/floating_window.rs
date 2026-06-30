@@ -68,11 +68,10 @@ impl FloatingWindow {
             let wd = window.clone();
             let ds = drag_state.clone();
             event_box.connect_motion_notify_event(move |_, ev| {
-                if let Some((sx, sy, wx, wy)) = *ds.borrow() {
+                let state = ds.borrow().clone(); // copy, drop borrow
+                if let Some((sx, sy, wx, wy)) = state {
                     let (rx, ry) = ev.root();
-                    let dx = rx as i32 - sx as i32;
-                    let dy = ry as i32 - sy as i32;
-                    wd.move_(wx + dx, wy + dy);
+                    wd.move_(wx + rx as i32 - sx as i32, wy + ry as i32 - sy as i32);
                 }
                 gtk::glib::Propagation::Proceed
             });
@@ -80,10 +79,10 @@ impl FloatingWindow {
         {
             let wd = window.clone();
             let ds = drag_state.clone();
-            event_box.connect_button_release_event(move |_, ev| {
-                if let Some((_, _, _, _)) = *ds.borrow() {
+            event_box.connect_button_release_event(move |_, _ev| {
+                let has_drag = ds.borrow().is_some();
+                if has_drag {
                     *ds.borrow_mut() = None;
-                    // Snap to nearest edge
                     snap_to_edge(&wd);
                 }
                 gtk::glib::Propagation::Proceed
