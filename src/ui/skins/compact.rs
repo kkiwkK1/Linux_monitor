@@ -3,6 +3,7 @@ use super::horizontal::fmt_speed;
 use crate::config::AppearanceConfig;
 use crate::locale::L;
 use crate::monitor::SystemSnapshot;
+use crate::ui::theme;
 use gtk::prelude::*;
 use gtk::{Box as GtkBox, Label, Orientation};
 use std::cell::RefCell;
@@ -30,11 +31,11 @@ impl Skin for CompactSkin {
 
         let label = Label::new(None);
         label.set_markup(&format!(
-            "<span font_desc='{}' foreground='#88ccff'>CPU --%</span>  \
-             <span font_desc='{}' foreground='#88ee88'>MEM --%</span>  \
-             <span font_desc='{}' foreground='#eedd88'>↓-- ↑--</span>  \
-             <span font_desc='{}' foreground='#eeaa66'>🌡--°C</span>",
-            fs, fs, fs, fs));
+            "<span font_desc='{}' foreground='{}'>CPU --%</span>  \
+             <span font_desc='{}' foreground='{}'>MEM --%</span>  \
+             <span font_desc='{}' foreground='{}'>↓-- ↑--</span>  \
+             <span font_desc='{}' foreground='{}'>--°C</span>",
+            fs, theme::CPU.hex(), fs, theme::MEM.hex(), fs, theme::NET_RX.hex(), fs, theme::TEMP.hex()));
         *self.label.borrow_mut() = Some(label.clone());
         outer.add(&label);
         outer.upcast::<gtk::Widget>()
@@ -54,14 +55,14 @@ impl Skin for CompactSkin {
             let gpu_t = snapshot.gpu.first().map(|g| g.temperature_c).unwrap_or(t);
 
             l.set_markup(&format!(
-                "<span font_desc='{}' foreground='#88ccff'>CPU {:3.0}%</span>  \
-                 <span font_desc='{}' foreground='#88ee88'>MEM {:3.0}%</span>  \
-                 <span font_desc='{}' foreground='#eedd88'>↓{} ↑{}</span>  \
-                 <span font_desc='{}' foreground='#eeaa66'>🌡{:3.0}°C</span>",
-                fs, snapshot.cpu.usage_percent,
-                fs, snapshot.memory.usage_percent,
-                fs, rx, tx,
-                fs, gpu_t));
+                "<span font_desc='{}' foreground='{}'>CPU {:3.0}%</span>  \
+                 <span font_desc='{}' foreground='{}'>MEM {:3.0}%</span>  \
+                 <span font_desc='{}' foreground='{}'>↓{} ↑{}</span>  \
+                 <span font_desc='{}' foreground='{}'>{:3.0}°C</span>",
+                fs, theme::CPU.hex(), snapshot.cpu.usage_percent,
+                fs, theme::MEM.hex(), snapshot.memory.usage_percent,
+                fs, theme::NET_RX.hex(), rx, tx,
+                fs, theme::temp_color(gpu_t as f64).hex(), gpu_t));
         }
     }
 }

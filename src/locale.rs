@@ -17,6 +17,11 @@ pub trait Locale: Send + Sync {
     fn skin_horizontal(&self) -> &str;
     fn skin_vertical(&self) -> &str;
     fn skin_compact(&self) -> &str;
+    fn skin_refined(&self) -> &str;
+    fn skin_rings(&self) -> &str;
+    fn skin_glass(&self) -> &str;
+    fn skin_ambient(&self) -> &str;
+    fn skin_aurora(&self) -> &str;
 
     // Settings / 设置
     fn settings_title(&self) -> &str;
@@ -113,6 +118,11 @@ impl Locale for ChineseLocale {
     fn skin_horizontal(&self) -> &str { "横条模式" }
     fn skin_vertical(&self) -> &str { "竖排列表" }
     fn skin_compact(&self) -> &str { "紧凑模式" }
+    fn skin_refined(&self) -> &str { "精致扁平" }
+    fn skin_rings(&self) -> &str { "环形仪表" }
+    fn skin_glass(&self) -> &str { "毛玻璃" }
+    fn skin_ambient(&self) -> &str { "大字极简" }
+    fn skin_aurora(&self) -> &str { "极光" }
 
     fn settings_title(&self) -> &str { "LinuxMonitor — 设置" }
     fn settings_tab_general(&self) -> &str { "  常规  " }
@@ -204,6 +214,11 @@ impl Locale for EnglishLocale {
     fn skin_horizontal(&self) -> &str { "Horizontal Bar" }
     fn skin_vertical(&self) -> &str { "Vertical List" }
     fn skin_compact(&self) -> &str { "Compact Mode" }
+    fn skin_refined(&self) -> &str { "Refined Flat" }
+    fn skin_rings(&self) -> &str { "Ring Gauges" }
+    fn skin_glass(&self) -> &str { "Frosted Glass" }
+    fn skin_ambient(&self) -> &str { "Ambient" }
+    fn skin_aurora(&self) -> &str { "Aurora" }
 
     fn settings_title(&self) -> &str { "LinuxMonitor — Settings" }
     fn settings_tab_general(&self) -> &str { "  General  " }

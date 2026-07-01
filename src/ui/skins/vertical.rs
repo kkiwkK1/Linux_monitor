@@ -3,6 +3,7 @@ use super::horizontal::{fmt_bytes, fmt_speed};
 use crate::config::AppearanceConfig;
 use crate::locale::L;
 use crate::monitor::SystemSnapshot;
+use crate::ui::theme;
 use gtk::prelude::*;
 use gtk::{Box as GtkBox, Label, Orientation};
 use std::cell::RefCell;
@@ -43,17 +44,19 @@ impl Skin for VerticalSkin {
         let labels = self.labels.borrow();
         if labels.len() < 5 { return; }
 
+        let dim = theme::TEXT_DIM.hex();
+
         // CPU
         let cpu_pct = snapshot.cpu.usage_percent as f64;
         labels[0].set_markup(&format!(
-            "<span font_desc='{}' foreground='#66ccff'><b>🖥 CPU</b>  {}</span>  <span font_desc='{}' foreground='#5599cc'>{}MHz  {}c</span>",
-            fs, bar(cpu_pct, 12), fs - 1, snapshot.cpu.frequency_mhz, snapshot.cpu.core_count));
+            "<span font_desc='{}' foreground='{}'><b>CPU</b>  {}</span>  <span font_desc='{}' foreground='{}'>{}MHz  {}c</span>",
+            fs, theme::CPU.hex(), bar(cpu_pct, 12), fs - 1, dim, snapshot.cpu.frequency_mhz, snapshot.cpu.core_count));
 
         // MEM
         let mem_pct = snapshot.memory.usage_percent as f64;
         labels[1].set_markup(&format!(
-            "<span font_desc='{}' foreground='#99ee99'><b>🧠 MEM</b>  {}</span>  <span font_desc='{}' foreground='#66aa66'>{}/{}</span>",
-            fs, bar(mem_pct, 12), fs - 1, fmt_bytes(snapshot.memory.used_kb*1024), fmt_bytes(snapshot.memory.total_kb*1024)));
+            "<span font_desc='{}' foreground='{}'><b>MEM</b>  {}</span>  <span font_desc='{}' foreground='{}'>{}/{}</span>",
+            fs, theme::MEM.hex(), bar(mem_pct, 12), fs - 1, dim, fmt_bytes(snapshot.memory.used_kb*1024), fmt_bytes(snapshot.memory.total_kb*1024)));
 
         // NET
         let net = snapshot.network.first();
@@ -63,22 +66,22 @@ impl Skin for VerticalSkin {
         let net_max = net.map(|n| n.rx_speed_bytes.max(n.tx_speed_bytes) as f64).unwrap_or(0.0);
         let net_pct = (net_max / 10_485_760.0 * 100.0).min(100.0);
         labels[2].set_markup(&format!(
-            "<span font_desc='{}' foreground='#ffcc66'><b>🌐 NET</b>  {}</span>  <span font_desc='{}' foreground='#bb9933'>↓{} ↑{}  {}</span>",
-            fs, bar(net_pct, 12), fs - 1, rx, tx, iface));
+            "<span font_desc='{}' foreground='{}'><b>NET</b>  {}</span>  <span font_desc='{}' foreground='{}'>↓{} ↑{}  {}</span>",
+            fs, theme::NET_RX.hex(), bar(net_pct, 12), fs - 1, dim, rx, tx, iface));
 
         // DISK
         if let Some(disk) = snapshot.disk.first() {
             labels[3].set_markup(&format!(
-                "<span font_desc='{}' foreground='#cc99ff'><b>💾 DSK</b>  {}</span>  <span font_desc='{}' foreground='#9977bb'>{}/{}  {}</span>",
-                fs, bar(disk.usage_percent as f64, 12), fs - 1, fmt_bytes(disk.used_kb*1024), fmt_bytes(disk.total_kb*1024), disk.mount_point));
+                "<span font_desc='{}' foreground='{}'><b>DSK</b>  {}</span>  <span font_desc='{}' foreground='{}'>{}/{}  {}</span>",
+                fs, theme::DISK.hex(), bar(disk.usage_percent as f64, 12), fs - 1, dim, fmt_bytes(disk.used_kb*1024), fmt_bytes(disk.total_kb*1024), disk.mount_point));
         }
 
         // GPU
         if let Some(gpu) = snapshot.gpu.first() {
             let gpu_pct = gpu.usage_percent as f64;
             labels[4].set_markup(&format!(
-                "<span font_desc='{}' foreground='#ff9966'><b>🎮 GPU</b>  {}</span>  <span font_desc='{}' foreground='#cc6633'>{:3.0}°C  {}/{}</span>",
-                fs, bar(gpu_pct, 12), fs - 1, gpu.temperature_c,
+                "<span font_desc='{}' foreground='{}'><b>GPU</b>  {}</span>  <span font_desc='{}' foreground='{}'>{:3.0}°C  {}/{}</span>",
+                fs, theme::GPU.hex(), bar(gpu_pct, 12), fs - 1, dim, gpu.temperature_c,
                 fmt_bytes(gpu.memory_used_mb*1024*1024), fmt_bytes(gpu.memory_total_mb*1024*1024)));
         }
     }

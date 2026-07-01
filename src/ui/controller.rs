@@ -72,6 +72,7 @@ impl AppController {
     pub fn switch_skin(&self, skin_name: &str) {
         self.config.borrow_mut().appearance.skin = skin_name.to_string();
         if let Some(skin) = skins::find_skin(skin_name) {
+            self.floating.set_host_card(skin.self_backed());
             let w = skin.create_widget(&self.config.borrow().appearance);
             let content = self.floating.get_content();
             let children = content.children();
@@ -80,12 +81,13 @@ impl AppController {
             content.show_all();
             self.floating.set_skin(skin);
         }
-        // Resize: compact gets slim height
-        let (w, h) = if skin_name == "compact" {
-            (420, 24)
+        // Resize width per skin, then let height hug the content (height 1 is
+        // clamped up to the natural minimum) so no empty dark space remains.
+        let w = if skin_name == "compact" {
+            420
         } else {
-            (self.config.borrow().window.width, self.config.borrow().window.height)
+            self.config.borrow().window.width
         };
-        self.floating.get_window().resize(w, h);
+        self.floating.get_window().resize(w.max(1), 1);
     }
 }

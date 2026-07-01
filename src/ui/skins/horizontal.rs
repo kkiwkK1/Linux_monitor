@@ -2,6 +2,7 @@ use super::Skin;
 use crate::config::AppearanceConfig;
 use crate::locale::L;
 use crate::monitor::SystemSnapshot;
+use crate::ui::theme;
 use gtk::prelude::*;
 use gtk::{Box as GtkBox, Label, Orientation, DrawingArea};
 use std::cell::RefCell;
@@ -66,10 +67,10 @@ impl Skin for HorizontalSkin {
             }};
         }
         // Fixed-width labels: CPU(6ch) spacer MEM(7ch) spacer NET(15ch) spacer GPU(9ch)
-        mk_label!(cpu_label, "#66ccff", "  CPU\n  --%", 6);
-        mk_label!(mem_label, "#99ee99", "  MEM\n  --%", 7);
-        mk_label!(net_label, "#ffcc66", "  ↓-------\n  ↑-------", 15);
-        mk_label!(temp_label, "#ff9966", " 🌡 --°C", 9);
+        mk_label!(cpu_label, theme::CPU.hex(), "  CPU\n  --%", 6);
+        mk_label!(mem_label, theme::MEM.hex(), "  MEM\n  --%", 7);
+        mk_label!(net_label, theme::NET_RX.hex(), "  ↓-------\n  ↑-------", 15);
+        mk_label!(temp_label, theme::TEMP.hex(), " --°C", 9);
         outer.add(&top);
 
         // Chart — taller, two sections
@@ -86,8 +87,8 @@ impl Skin for HorizontalSkin {
             let h = area.allocation().height() as f64;
             if w < 10.0 || h < 10.0 { return gtk::glib::Propagation::Proceed; }
 
-            // Subtle center line
-            cr.set_source_rgba(1.0, 1.0, 1.0, 0.04);
+            // Subtle gridlines
+            cr.set_source_rgba(1.0, 1.0, 1.0, theme::GRID_ALPHA);
             cr.set_line_width(0.5);
             let mid = h / 2.0;
             cr.move_to(0.0, mid); cr.line_to(w, mid);
@@ -105,15 +106,15 @@ impl Skin for HorizontalSkin {
             let top_h = mid; // upper half: CPU + MEM (0-100%)
             let bot_h = h - mid; // lower half: Network + GPU
 
-            // Upper: CPU (blue), MEM (green) — 0-100%
-            draw_line(cr, &cpu, 100.0, 0.3, 0.8, 1.0, x0, sw, 0.0, top_h, 1.8);
-            draw_line(cr, &mem, 100.0, 0.3, 0.95, 0.5, x0, sw, 0.0, top_h, 1.8);
+            // Upper: CPU, MEM — 0-100%
+            draw_line(cr, &cpu, 100.0, theme::CPU, x0, sw, 0.0, top_h, 1.4);
+            draw_line(cr, &mem, 100.0, theme::MEM, x0, sw, 0.0, top_h, 1.4);
 
-            // Lower: Net RX (yellow), Net TX (orange) — 0-10MB/s = 100%
-            draw_line(cr, &rx,  100.0, 0.95, 0.75, 0.15, x0, sw, mid, bot_h, 1.5);
-            draw_line(cr, &tx,  100.0, 1.0,  0.4,  0.2, x0, sw, mid + 4.0, bot_h - 4.0, 1.2);
-            // GPU temp (red, offset slightly)
-            draw_line(cr, &gpu, 100.0, 1.0,  0.3,  0.3, x0, sw, mid, bot_h, 0.8);
+            // Lower: Net RX, Net TX — 0-10MB/s = 100%
+            draw_line(cr, &rx,  100.0, theme::NET_RX, x0, sw, mid, bot_h, 1.3);
+            draw_line(cr, &tx,  100.0, theme::NET_TX, x0, sw, mid + 4.0, bot_h - 4.0, 1.1);
+            // GPU/temp line
+            draw_line(cr, &gpu, 100.0, theme::GPU, x0, sw, mid, bot_h, 1.0);
 
             gtk::glib::Propagation::Proceed
         });
@@ -137,20 +138,19 @@ impl Skin for HorizontalSkin {
 
         // Fixed-width values — two-line layout
         if let Some(ref l) = *self.cpu_label.borrow() {
-            l.set_markup(&format!("<span font_desc='{}' foreground='#66ccff'>  CPU\n {:>4.0}%</span>", fs, cpu_v));
+            l.set_markup(&format!("<span font_desc='{}' foreground='{}'>  CPU\n {:>4.0}%</span>", fs, theme::CPU.hex(), cpu_v));
         }
         if let Some(ref l) = *self.mem_label.borrow() {
-            l.set_markup(&format!("<span font_desc='{}' foreground='#99ee99'>  MEM\n {:>4.0}%</span>", fs, mem_v));
+            l.set_markup(&format!("<span font_desc='{}' foreground='{}'>  MEM\n {:>4.0}%</span>", fs, theme::MEM.hex(), mem_v));
         }
         if let Some(ref l) = *self.net_label.borrow() {
             let rx_s = fmt_speed(rx_v as u64);
             let tx_s = fmt_speed(tx_v as u64);
-            l.set_markup(&format!("<span font_desc='{}' foreground='#ffcc66'>  ↓{:>7}\n  ↑{:>7}</span>", fs, rx_s, tx_s));
+            l.set_markup(&format!("<span font_desc='{}' foreground='{}'>  ↓{:>7}\n  ↑{:>7}</span>", fs, theme::NET_RX.hex(), rx_s, tx_s));
         }
         if let Some(ref l) = *self.temp_label.borrow() {
             let gpu_t = snapshot.gpu.first().map(|g| g.temperature_c).unwrap_or(gpu_v as f32) as f64;
-            let c = if gpu_t > 80.0 { "#ff4444" } else if gpu_t > 60.0 { "#ffaa44" } else { "#ff9966" };
-            l.set_markup(&format!("<span font_desc='{}' foreground='{}'> 🌡 {:>3.0}°C</span>", fs, c, gpu_t));
+            l.set_markup(&format!("<span font_desc='{}' foreground='{}'> {:>3.0}°C</span>", fs, theme::temp_color(gpu_t).hex(), gpu_t));
         }
 
         push(&self.h_cpu, cpu_v); push(&self.h_mem, mem_v);
@@ -169,9 +169,10 @@ fn push(buf: &Rc<RefCell<Vec<f64>>>, val: f64) {
 }
 
 fn draw_line(cr: &gtk::cairo::Context, data: &[f64], max: f64,
-             r: f64, g: f64, b: f64, x0: f64, sw: f64, y0: f64, yh: f64, lw: f64) {
+             color: theme::Color, x0: f64, sw: f64, y0: f64, yh: f64, lw: f64) {
     if max <= 0.0 || data.len() < 2 { return; }
-    cr.set_source_rgba(r, g, b, 0.85);
+    let (r, g, b) = color.rgb_f();
+    cr.set_source_rgba(r, g, b, 0.9);
     cr.set_line_width(lw);
     cr.set_line_cap(gtk::cairo::LineCap::Round);
     let mut first = true;

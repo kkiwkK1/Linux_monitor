@@ -25,6 +25,23 @@ impl FloatingWindow {
         window.set_decorated(false);
         window.set_resizable(true);
 
+        // Transparent top-level so only the rounded card shows (no square white
+        // corners). Needs an RGBA visual + a compositor; without one, corners
+        // fall back to opaque black rather than white.
+        if let Some(screen) = gtk::gdk::Screen::default() {
+            if let Some(visual) = screen.rgba_visual() {
+                window.set_visual(Some(&visual));
+            }
+        }
+        window.set_app_paintable(true);
+        window.connect_draw(|_, cr| {
+            cr.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+            cr.set_operator(gtk::cairo::Operator::Source);
+            let _ = cr.paint();
+            cr.set_operator(gtk::cairo::Operator::Over);
+            gtk::glib::Propagation::Proceed
+        });
+
         let css = CssProvider::new();
         css.load_from_data(include_str!("../../assets/style.css").as_bytes()).unwrap();
         gtk::StyleContext::add_provider_for_screen(
@@ -32,12 +49,15 @@ impl FloatingWindow {
         );
 
         let content_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        content_box.style_context().add_class("monitor-window");
 
         let current_skin: Rc<RefCell<Option<Box<dyn Skin>>>> = Rc::new(RefCell::new(None));
-        if let Some(skin) = skins::find_skin(&skin_name) {
+        // Fall back to the default skin if the configured one no longer exists.
+        if let Some(skin) = skins::find_skin(&skin_name).or_else(|| skins::find_skin("horizontal")) {
+            set_host_card(&content_box, skin.self_backed());
             content_box.add(&skin.create_widget(&config.borrow().appearance));
             *current_skin.borrow_mut() = Some(skin);
+        } else {
+            set_host_card(&content_box, false);
         }
 
         // Wrap in EventBox for reliable mouse capture
@@ -107,6 +127,9 @@ impl FloatingWindow {
 
         window.show_all();
         window.set_keep_above(config.borrow().appearance.always_on_top);
+        // Hug the skin's natural height instead of a fixed default, so short
+        // skins don't leave empty dark space below the content.
+        window.resize(config.borrow().window.width.max(1), 1);
 
         Self { window, content_box, engine, current_skin, config }
     }
@@ -126,13 +149,18 @@ impl FloatingWindow {
     pub fn show(&self) { self.window.show_all(); self.window.present(); self.engine.borrow_mut().set_mode(PollMode::Active); }
     pub fn hide(&self) { self.window.hide(); self.engine.borrow_mut().set_mode(PollMode::Background); }
     pub fn set_skin(&self, skin: Box<dyn Skin>) { *self.current_skin.borrow_mut() = Some(skin); }
+    /// Switch the host card between the shared `.monitor-window` and a bare
+    /// transparent host (for skins that paint their own background).
+    pub fn set_host_card(&self, self_backed: bool) { set_host_card(&self.content_box, self_backed); }
     pub fn set_keep_above(&self, ka: bool) { self.window.set_keep_above(ka); }
     pub fn set_opacity(&self, op: f64) { self.window.set_opacity(op); }
     pub fn set_background(&self, appearance: &crate::config::AppearanceConfig) {
         let css = CssProvider::new();
         let bg_css = match appearance.background_type {
-            crate::config::BackgroundType::None =>
-                "background-color: rgba(30, 30, 30, 0.92);".to_string(),
+            crate::config::BackgroundType::None => {
+                let (r, g, b) = (crate::ui::theme::BG.r, crate::ui::theme::BG.g, crate::ui::theme::BG.b);
+                format!("background-color: rgba({r}, {g}, {b}, 0.94);")
+            }
             crate::config::BackgroundType::Color =>
                 format!("background-color: {};", appearance.background_color),
             crate::config::BackgroundType::Image =>
@@ -174,6 +202,18 @@ fn mi(app: &gtk::Application, label: &str, action: &str) -> gtk::MenuItem {
     let app = app.clone();
     item.connect_activate(move |_| { app.activate_action(&a, None); });
     item
+}
+
+/// Toggle the content box between the shared card and a bare transparent host.
+fn set_host_card(content_box: &gtk::Box, self_backed: bool) {
+    let ctx = content_box.style_context();
+    if self_backed {
+        ctx.remove_class("monitor-window");
+        ctx.add_class("card-bare");
+    } else {
+        ctx.remove_class("card-bare");
+        ctx.add_class("monitor-window");
+    }
 }
 
 const SNAP_THRESHOLD: i32 = 20;
