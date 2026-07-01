@@ -55,6 +55,8 @@ pub trait Locale: Send + Sync {
     fn settings_opacity(&self) -> &str;
     fn settings_opacity_desc(&self) -> &str;
     fn settings_always_on_top(&self) -> &str;
+    fn settings_autostart(&self) -> &str;
+    fn settings_autostart_desc(&self) -> &str;
     fn settings_bg_type(&self) -> &str;
     fn settings_bg_none(&self) -> &str;
     fn settings_bg_color(&self) -> &str;
@@ -155,6 +157,8 @@ impl Locale for ChineseLocale {
     fn settings_opacity(&self) -> &str { "透明度" }
     fn settings_opacity_desc(&self) -> &str { "窗口透明度 (0.3–1.0)" }
     fn settings_always_on_top(&self) -> &str { "窗口置顶" }
+    fn settings_autostart(&self) -> &str { "开机启动" }
+    fn settings_autostart_desc(&self) -> &str { "登录时自动运行" }
     fn settings_bg_type(&self) -> &str { "背景类型:" }
     fn settings_bg_none(&self) -> &str { "默认" }
     fn settings_bg_color(&self) -> &str { "纯色" }
@@ -251,6 +255,8 @@ impl Locale for EnglishLocale {
     fn settings_opacity(&self) -> &str { "Opacity" }
     fn settings_opacity_desc(&self) -> &str { "Window transparency (0.3–1.0)" }
     fn settings_always_on_top(&self) -> &str { "Always on top" }
+    fn settings_autostart(&self) -> &str { "Start on boot" }
+    fn settings_autostart_desc(&self) -> &str { "Run automatically at login" }
     fn settings_bg_type(&self) -> &str { "Background:" }
     fn settings_bg_none(&self) -> &str { "Default" }
     fn settings_bg_color(&self) -> &str { "Solid Color" }

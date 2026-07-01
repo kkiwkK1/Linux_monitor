@@ -24,6 +24,18 @@ impl FloatingWindow {
         window.set_opacity(config.borrow().appearance.opacity.clamp(0.3, 1.0));
         window.set_decorated(false);
         window.set_resizable(true);
+        // A floating widget shouldn't own a taskbar/pager entry — hide it from
+        // both (and from most alt-tab lists) via the EWMH skip hints.
+        window.set_skip_taskbar_hint(true);
+        window.set_skip_pager_hint(true);
+
+        // App icon (used in alt-tab / window lists / all our windows) and a PNG
+        // export for the autostart entry and packaging.
+        if let Some(pb) = crate::ui::icon::pixbuf(64) {
+            window.set_icon(Some(&pb));
+            gtk::Window::set_default_icon(&pb);
+        }
+        let _ = crate::ui::icon::ensure_png();
 
         // Transparent top-level so only the rounded card shows (no square white
         // corners). Needs an RGBA visual + a compositor; without one, corners

@@ -126,6 +126,33 @@ fn build_general_page(config: &Rc<RefCell<AppConfig>>) -> gtk::Widget {
         });
         page.add(&row);
     }
+
+    // Start-on-login (XDG autostart). State comes from the autostart entry's
+    // existence, so no config field is needed.
+    let autostart_switch = gtk::Switch::new();
+    autostart_switch.set_active(crate::autostart::is_enabled());
+    autostart_switch.set_valign(gtk::Align::Center);
+    let autostart_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    let autostart_text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    let autostart_name = gtk::Label::new(None);
+    autostart_name.set_halign(gtk::Align::Start);
+    autostart_name.set_markup(&format!("<b>{}</b>", L.settings_autostart()));
+    let autostart_desc = gtk::Label::new(Some(L.settings_autostart_desc()));
+    autostart_desc.set_halign(gtk::Align::Start);
+    autostart_desc.style_context().add_class("dim-label");
+    autostart_text.add(&autostart_name);
+    autostart_text.add(&autostart_desc);
+    autostart_row.add(&autostart_text);
+    autostart_row.set_hexpand(true);
+    autostart_row.add(&autostart_switch);
+    autostart_switch.connect_state_set(|_, active| {
+        if let Err(e) = crate::autostart::set_enabled(active) {
+            log::error!("Failed to update autostart entry: {}", e);
+        }
+        gtk::glib::Propagation::Proceed
+    });
+    page.add(&autostart_row);
+
     page.upcast::<gtk::Widget>()
 }
 

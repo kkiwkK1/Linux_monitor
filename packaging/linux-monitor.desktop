@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=LinuxMonitor
+GenericName=System Monitor
+GenericName[zh_CN]=系统监控
+Comment=Lightweight floating hardware performance monitor
+Comment[zh_CN]=轻量级悬浮硬件性能监控
+Exec=linux-monitor
+Icon=linux-monitor
+Terminal=false
+Categories=System;Monitor;Utility;GTK;
+Keywords=cpu;memory;network;gpu;temperature;monitor;system;
+StartupNotify=false

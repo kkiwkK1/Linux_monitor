@@ -26,6 +26,18 @@ sudo cp target/release/linux-monitor /usr/local/bin/
 linux-monitor
 ```
 
+启动后默认转入后台（脱离终端）；调试时加 `--foreground` 让它留在前台、日志输出到 stderr。
+
+### 打包为 .deb（Debian/Ubuntu）
+
+```bash
+cargo install cargo-deb          # 一次性
+cargo deb                        # 产物: target/debian/linux-monitor_<版本>_amd64.deb
+sudo apt install ./target/debian/linux-monitor_*_amd64.deb
+```
+
+`.deb` 会把二进制装到 `/usr/bin`、`.desktop` 装到应用菜单、图标装到 hicolor 主题，并自动声明运行时依赖（GTK3 / Cairo / Pango / libayatana-appindicator3）。
+
 ## 快捷键
 
 | 快捷键 | 功能 |

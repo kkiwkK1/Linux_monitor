@@ -9,7 +9,7 @@ license = "GPL-3.0-or-later"
 # GTK3 UI (native set_keep_above, begin_move_drag)
 gtk = { version = "0.18", package = "gtk", features = ["v3_24"] }
 gio = "0.18"
-cairo = { version = "0.18", package = "cairo-rs" }
+cairo = { version = "0.18", package = "cairo-rs", features = ["png"] }
 pangocairo = "0.18"
 
 # System monitoring
@@ -34,9 +34,30 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 # Plugin system (Phase 4)
 rhai = "1"
 
+# System tray / StatusNotifierItem (links the installed libayatana-appindicator3)
+libappindicator = "0.9"
+
 [profile.release]
 opt-level = 3
 lto = "fat"
 codegen-units = 1
 strip = true
 panic = "abort"
+
+# ── Debian/Ubuntu packaging (cargo-deb) ──────────────────────────────────────
+# Build with: cargo deb   →   target/debian/linux-monitor_<ver>_amd64.deb
+[package.metadata.deb]
+maintainer = "恶心男孩 <taopengkuang@3dk.com>"
+copyright = "2026, 恶心男孩. GPL-3.0-or-later."
+section = "utils"
+priority = "optional"
+extended-description = "Lightweight always-on-top floating widget that monitors CPU, memory, network, disk, GPU and temperature. Multiple built-in skins plus user-defined declarative skins, a Rhai plugin sandbox, and a system-tray icon."
+# $auto resolves linked libs (GTK3, Cairo, Pango) via dpkg-shlibdeps. The
+# appindicator lib is dlopen'd at runtime (not in NEEDED), so declare it manually.
+depends = "$auto, libayatana-appindicator3-1"
+assets = [
+    ["target/release/linux-monitor", "usr/bin/", "755"],
+    ["packaging/linux-monitor.desktop", "usr/share/applications/", "644"],
+    ["assets/icon.png", "usr/share/icons/hicolor/256x256/apps/linux-monitor.png", "644"],
+    ["README.md", "usr/share/doc/linux-monitor/README.md", "644"],
+]

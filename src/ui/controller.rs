@@ -17,6 +17,8 @@ pub struct AppController {
     app: gtk::Application,
     history_store: Option<Arc<crate::history::store::HistoryStore>>,
     plugin_manager: Option<Arc<PluginManager>>,
+    // Kept alive so the tray icon persists; dropping it removes the item.
+    _tray: RefCell<Option<libappindicator::AppIndicator>>,
 }
 
 impl AppController {
@@ -30,6 +32,7 @@ impl AppController {
             floating: floating.clone(),
             config: config.clone(), app: app.clone(),
             history_store, plugin_manager,
+            _tray: RefCell::new(None),
         });
 
         let c = ctrl.clone();
@@ -59,6 +62,10 @@ impl AppController {
             a.connect_activate(move |_, _| c.switch_skin(&sn));
             app.add_action(&a);
         }
+
+        // Tray icon in the status area (built after actions exist so its menu
+        // can drive them). Stored on the controller to stay alive.
+        *ctrl._tray.borrow_mut() = Some(crate::ui::tray::build(app));
 
         ctrl
     }

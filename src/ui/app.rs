@@ -145,6 +145,11 @@ impl TrafficMonitorApp {
             });
         }
 
-        self.app.run();
+        // Strip our own flags so GTK/GApplication doesn't reject them as
+        // unknown options.
+        let args: Vec<String> = std::env::args()
+            .filter(|a| a != "--foreground" && a != "-f")
+            .collect();
+        self.app.run_with_args(&args);
     }
 }
