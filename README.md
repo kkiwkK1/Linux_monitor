@@ -155,6 +155,12 @@ if gpu_temp > 80.0 {
 
 Rust + GTK3 + Cairo + SQLite + Rhai + libayatana-appindicator
 
-## License
+## 开源引用 / 致谢
 
-GPL-3.0
+主要依赖：GTK 3 / Cairo / Pango / GdkPixbuf（LGPL-2.1+）、libayatana-appindicator3（LGPL）、SQLite（Public Domain），以及 `rhai` / `sysinfo` / `rusqlite` / `serde` 等 Rust crate（MIT 或 Apache-2.0）。完整清单与许可证见 [CREDITS.md](CREDITS.md)。
+
+应用图标（Pulse）为本项目原创，Cairo 绘制。
+
+## 开源协议
+
+本项目以 **GPL-3.0-or-later** 授权，完整条款见 [LICENSE](LICENSE)。
